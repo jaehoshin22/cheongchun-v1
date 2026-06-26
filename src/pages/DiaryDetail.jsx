@@ -1,0 +1,165 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  getDiary, getComments, createComment, deleteComment,
+  getEmpathy, toggleEmpathy, report,
+} from '../api';
+import { EMOTION_IMAGE } from '../utils/emotion';
+import useAuthStore from '../store/authStore';
+
+const REPORT_REASONS = ['BAD_WORD', 'SPAM', 'INAPPROPRIATE', 'OTHER'];
+const REPORT_LABELS  = ['욕설/비방', '스팸/광고', '부적절한 내용', '기타'];
+
+export default function DiaryDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+
+  const [diary, setDiary]       = useState(null);
+  const [comments, setComments] = useState([]);
+  const [empathy, setEmpathy]   = useState(null);
+  const [commentText, setCommentText] = useState('');
+  const [showReport, setShowReport]   = useState(false);
+
+  useEffect(() => {
+    getDiary(id).then((r) => setDiary(r.data));
+    getComments(id).then((r) => setComments(r.data));
+    getEmpathy(id).then((r) => setEmpathy(r.data));
+  }, [id]);
+
+  const handleEmpathy = () =>
+    toggleEmpathy(id).then((r) => setEmpathy(r.data));
+
+  const handleComment = async () => {
+    if (!commentText.trim()) return;
+    const res = await createComment(id, commentText);
+    setComments((prev) => [...prev, res.data]);
+    setCommentText('');
+  };
+
+  const handleDeleteComment = (commentId) =>
+    deleteComment(commentId).then(() =>
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+    );
+
+  const handleReport = async (reason) => {
+    try {
+      await report(Number(id), 'DIARY', reason);
+      alert('신고가 접수되었습니다.');
+    } catch (err) {
+      alert(err.response?.data?.message || '오류가 발생했습니다.');
+    }
+    setShowReport(false);
+  };
+
+  if (!diary) return <div className="min-h-screen flex items-center justify-center text-gray-400">불러오는 중...</div>;
+
+  const isMine = user && String(user.id) === String(diary.memberId);
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col pb-40">
+      {/* Header */}
+      <header className="flex items-center justify-between px-5 pt-10 pb-4">
+        <button onClick={() => navigate(-1)} className="text-gray-400 text-sm">← 뒤로</button>
+        {!isMine && (
+          <button onClick={() => setShowReport(true)} className="text-xs text-gray-400">신고</button>
+        )}
+      </header>
+
+      {/* Diary */}
+      <div className="px-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center font-bold text-primary">
+            {diary.nickname?.[0]}
+          </div>
+          <div>
+            <p className="font-medium text-sm">{diary.nickname}</p>
+            <p className="text-xs text-gray-400">{diary.diaryDate}</p>
+          </div>
+          {diary.emotion != null && (
+            <img src={EMOTION_IMAGE[diary.emotion]} alt="emotion" className="w-9 h-9 ml-auto object-contain" />
+          )}
+        </div>
+
+        {diary.title && <h2 className="text-xl font-bold mb-3">{diary.title}</h2>}
+        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{diary.content}</p>
+
+        {/* Empathy */}
+        {empathy && (
+          <button
+            onClick={handleEmpathy}
+            className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${
+              empathy.isEmpathized ? 'border-primary text-primary bg-primary-light' : 'border-gray-200 text-gray-400'
+            }`}
+          >
+            <span>❤️</span>
+            <span className="text-sm">{empathy.empathyCount}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Comments */}
+      <div className="mt-6 px-5">
+        <p className="font-semibold text-sm mb-3">댓글 {comments.length}</p>
+        {comments.map((c) => (
+          <div key={c.id} className="flex gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-xs font-bold text-primary shrink-0">
+              {c.nickname?.[0]}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">{c.nickname}</p>
+                <p className="text-xs text-gray-400">{c.createdAt?.slice(0, 10)}</p>
+              </div>
+              <p className="text-sm text-gray-700 mt-0.5">{c.content}</p>
+            </div>
+            {user && String(user.id) === String(c.memberId) && (
+              <button
+                onClick={() => handleDeleteComment(c.id)}
+                className="text-xs text-gray-300 shrink-0"
+              >
+                삭제
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Comment input */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 flex gap-2">
+        <input
+          className="flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm outline-none"
+          placeholder="댓글을 입력하세요 (최대 200자)"
+          maxLength={200}
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+        />
+        <button onClick={handleComment} className="bg-primary text-white text-sm px-4 rounded-full">
+          등록
+        </button>
+      </div>
+
+      {/* Report modal */}
+      {showReport && (
+        <div className="fixed inset-0 bg-black/40 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-6">
+            <h3 className="font-bold text-lg mb-4">신고 사유를 선택해주세요</h3>
+            {REPORT_REASONS.map((r, i) => (
+              <button
+                key={r}
+                onClick={() => handleReport(r)}
+                className="w-full text-left py-3 border-b border-gray-100 text-sm last:border-0"
+              >
+                {REPORT_LABELS[i]}
+              </button>
+            ))}
+            <button onClick={() => setShowReport(false)} className="w-full mt-4 text-center text-gray-400 text-sm">
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

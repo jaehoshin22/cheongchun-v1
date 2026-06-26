@@ -3,7 +3,7 @@ import { getFeed, getHotFeed } from '../api';
 import DiaryCard from '../components/diary/DiaryCard';
 import BottomNav from '../components/common/BottomNav';
 
-const TABS = ['최신', '추천', '인기'];
+const TABS = ['최신', '추천', '핫'];
 
 export default function Feed() {
   const [tab, setTab] = useState(0);

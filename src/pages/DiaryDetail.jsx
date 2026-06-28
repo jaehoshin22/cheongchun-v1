@@ -11,7 +11,6 @@ import {
 } from "../api";
 import { EMOTION_IMAGE } from "../utils/emotion";
 import useAuthStore from "../store/authStore";
-import { Siren } from "lucide-react";
 
 const REPORT_REASONS = ["BAD_WORD", "SPAM", "INAPPROPRIATE", "OTHER"];
 const REPORT_LABELS = ["욕설/비방", "스팸/광고", "부적절한 내용", "기타"];
@@ -25,6 +24,7 @@ export default function DiaryDetail() {
   const [comments, setComments] = useState([]);
   const [empathy, setEmpathy] = useState(null);
   const [commentText, setCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
 
@@ -37,11 +37,19 @@ export default function DiaryDetail() {
   const handleEmpathy = () => toggleEmpathy(id).then((r) => setEmpathy(r.data));
 
   const handleComment = async () => {
-    if (!commentText.trim()) return;
+    const content = commentText.trim();
 
-    const res = await createComment(id, commentText);
-    setComments((prev) => [...prev, res.data]);
-    setCommentText("");
+    if (!content || isSubmittingComment) return;
+
+    try {
+      setIsSubmittingComment(true);
+
+      const res = await createComment(id, content);
+      setComments((prev) => [...prev, res.data]);
+      setCommentText("");
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   const handleDeleteComment = (commentId) =>
@@ -144,10 +152,7 @@ export default function DiaryDetail() {
         <p className="font-semibold text-sm mb-3">댓글 {comments.length}</p>
 
         {comments.map((c) => (
-          <div
-            key={c.id}
-            className="relative flex gap-3 mb-4 items-start pr-10"
-          >
+          <div key={c.id} className="relative flex gap-3 mb-4 items-start pr-10">
             <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-xs font-bold text-primary shrink-0">
               {c.nickname?.[0]}
             </div>
@@ -176,7 +181,7 @@ export default function DiaryDetail() {
 
             <button
               onClick={() => openCommentReport(c.id)}
-              className="absolute right-0 top-0 z-50 bg-red-500 text-white text-xs px-2 py-1 rounded"
+              className="absolute right-0 top-0 text-xs text-gray-400"
             >
               신고
             </button>
@@ -191,12 +196,18 @@ export default function DiaryDetail() {
           maxLength={200}
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleComment()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleComment();
+            }
+          }}
         />
 
         <button
           onClick={handleComment}
-          className="bg-primary text-white text-sm px-4 rounded-full"
+          disabled={isSubmittingComment}
+          className="bg-primary text-white text-sm px-4 rounded-full disabled:opacity-50"
         >
           등록
         </button>

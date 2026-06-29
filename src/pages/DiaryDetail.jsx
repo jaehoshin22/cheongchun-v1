@@ -94,8 +94,10 @@ export default function DiaryDetail() {
   return (
     <div className="min-h-screen bg-white flex flex-col pb-40">
       <header className="flex items-center justify-between px-5 pt-10 pb-4">
-        <button onClick={() => navigate(-1)} className="text-gray-500 text-3xl font-black leading-none">
-          ‹
+        <button onClick={() => navigate(-1)} className="flex items-center text-gray-600">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
         </button>
 
         {!isMine && (

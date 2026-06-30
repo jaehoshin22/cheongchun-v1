@@ -161,11 +161,10 @@ export default function DiaryDetail() {
         {empathy && (
           <button
             onClick={handleEmpathy}
-            className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${
-              empathy.isEmpathized
+            className={`mt-6 flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${empathy.isEmpathized
                 ? "border-primary text-primary bg-primary-light"
                 : "border-gray-200 text-gray-400"
-            }`}
+              }`}
           >
             <span>❤️</span>
             <span className="text-sm">{empathy.empathyCount}</span>
@@ -236,7 +235,7 @@ export default function DiaryDetail() {
         <button
           onClick={handleComment}
           disabled={isSubmittingComment}
-          className="bg-primary text-white text-sm px-4 rounded-full disabled:opacity-50"
+          className="bg-primary text-white text-sm px-4 rounded-full disabled:opacity-50 whitespace-nowrap shrink-0"
         >
           등록
         </button>
